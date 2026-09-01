@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 3000
 
 #define the command to run your app using CMD (only one CMD allowed)
-CMD ['npm', 'start']
+CMD ["npm", "start"]
