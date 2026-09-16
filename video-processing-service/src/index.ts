@@ -9,9 +9,9 @@ setupDirectories();
 const app = express();
 app.use(express.json());
 
-// app.get("/", (req, res) => {
-//     res.send("Hello World");
-// });
+app.get("/", (req, res) => {
+    res.send("Video Processing Service is running successfully!");
+});
 
 app.post("/process-video", async (req, res) => {
     //Get the bucket and filename from the Cloud Pub/Sub message
