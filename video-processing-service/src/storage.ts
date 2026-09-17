@@ -72,9 +72,18 @@ export async function downloadRawVideo(fileName: string) {
 
 
 export async function uploadProcessedVideo(fileName: string) {
-    const fileBuffer = fs.readFileSync(`${localProcessedVideoPath}/${fileName}`);
+    const filePath = `${localProcessedVideoPath}/${fileName}`;
+    
+    console.log(`Reading processed video from ${filePath} for upload to Supabase.`);
+    if (!fs.existsSync(filePath)) {
+        throw new Error(`Processed video does not exist: ${filePath}`);
+    }
+    
+    const fileBuffer = fs.readFileSync(filePath);
 
-    const { error } = await supabase.storage
+    console.log(`Uploading ${fileName} to Supabase (${fileBuffer.length} bytes).`);
+
+    const { data, error } = await supabase.storage
         .from(processedVideoBucketName)
         .upload(fileName, fileBuffer, {
             upsert: true,
@@ -82,14 +91,14 @@ export async function uploadProcessedVideo(fileName: string) {
         });
 
     if (error) {
-        console.error(`Error uploading file ${fileName}:`, error);
+        console.error(`Supabase upload error:`, error);
         throw error;
     }
 
     console.log(
         `${fileName} uploaded to Supabase processed-videos.`
     );
-
+    console.log(`Upload response:`, data);
 }
 
 

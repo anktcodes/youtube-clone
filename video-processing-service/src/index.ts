@@ -25,30 +25,42 @@ app.post("/process-video", async (req, res) => {
     const outputFileName = `processed-${inputFileName}`;
 
     //Download the raw video from Supabase storage
-    await downloadRawVideo(inputFileName);
+    // await downloadRawVideo(inputFileName);
 
-    //convert the video to 360p
     try{
+        //1. Download the raw video from Supabase storage
+        console.log(`Starting download: ${inputFileName}`);
+        await downloadRawVideo(inputFileName);
+        console.log(`Download complete: ${inputFileName}`);
+
+        //2. Convert the video to 360p
+        console.log(`Starting conversion: ${inputFileName}`);
         await convertVideo(inputFileName, outputFileName);
-    } catch (err){
+        console.log(`Conversion complete: ${outputFileName}`);
+
+        //3. Upload processed video
+        console.log(`Starting Upload: ${outputFileName}`);
+        await uploadProcessedVideo(outputFileName);
+        console.log(`Upload complete: ${outputFileName}`);
+
+        //4. Delete raw and processed videos from local storage
+        console.log(`Starting deletion of local files: ${inputFileName}, ${outputFileName}`);
         await Promise.all([
-        deleteRawVideo(inputFileName),
-        deleteProcessedVideo(outputFileName)
+            deleteRawVideo(inputFileName),
+            deleteProcessedVideo(outputFileName)
+        ]);
+        console.log(`Deletion complete: ${inputFileName}, ${outputFileName}`);
+
+        return res.status(200).send( "Processing finished successfully.");
+    } catch (err){
+        console.error("video processing failed:", err);
+        await Promise.all([
+            deleteRawVideo(inputFileName),
+            deleteProcessedVideo(outputFileName)
         ]);
 
-            
-        console.error(err);
         return res.status(500).send('Internal Server Error: video processing failed.');
     }
-
-    //Upload the processed video to supabase storage
-    await uploadProcessedVideo(outputFileName);
-    await Promise.all([
-        deleteRawVideo(inputFileName),
-        deleteProcessedVideo(outputFileName)
-    ]);
-
-    return res.status(200).send('Processing finished successfully.');
 });
 
 const port = process.env.PORT || 3000
