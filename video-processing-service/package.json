@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@google-cloud/storage": "^8.0.1",
+    "@supabase/supabase-js": "^2.116.0",
     "express": "^5.2.1",
     "fluent-ffmpeg": "^2.1.3"
   },

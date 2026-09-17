@@ -1,15 +1,22 @@
-// 1. Google Cloud Storage file interactions
+// 1. Google Cloud Storage file interactions --> Now using Supabase instead
 // 2. Local file interactions
 
-import { Storage } from '@google-cloud/storage';
+// import { Storage } from '@google-cloud/storage'; -- Now using supabase instead
+import { createClient } from '@supabase/supabase-js';
+
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
 
 
-const storage = new Storage();
+// const storage = new Storage(); -- Now using Supabase instead
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-const rawVideoBucketName = "anktcodes-youtube-clone-raw-videos";
-const processedVideoBucketName = "anktcodes-youtube-clone-processed-videos";
+
+const rawVideoBucketName = "raw-videos";
+const processedVideoBucketName = "processed-videos";
 
 const localRawVideoPath = "./raw-videos";
 const localProcessedVideoPath = "./processed-videos";
@@ -43,28 +50,44 @@ export function convertVideo(rawVideoName: string, processedVideoName: string) {
 
 // download raw video function write jsdocs here
 export async function downloadRawVideo(fileName: string) {
-    await storage.bucket(rawVideoBucketName)
-    .file(fileName)
-    .download({destination: `${localRawVideoPath}/${fileName}`});
+    const { data, error } = await supabase.storage
+        .from(rawVideoBucketName)
+        .download(fileName);
+        
+    if (error) {
+        console.error(`Error downloading file ${fileName}:`, error);
+        throw error;
+    }
+
+    const buffer = Buffer.from(await data.arrayBuffer());
+
+    fs.writeFileSync(`${localRawVideoPath}/${fileName}`, buffer);
 
     console.log(
-        `gs://${rawVideoBucketName}/{fileName} downloaded to ${localRawVideoPath}/${fileName}.`
-    )
+        `${fileName} downloaded from Supabase to ${localRawVideoPath}/${fileName}`
+    );
 }
 
 
 export async function uploadProcessedVideo(fileName: string) {
-    const bucket = storage.bucket(processedVideoBucketName);
+    const fileBuffer = fs.readFileSync(`${localProcessedVideoPath}/${fileName}`);
 
-    await bucket.upload(`${localProcessedVideoPath}/${fileName}`,{
-        destination: fileName
-    });
+    const { error } = await supabase.storage
+        .from(processedVideoBucketName)
+        .upload(fileName, fileBuffer, {
+            upsert: true,
+            contentType: 'video/mp4'
+        });
+
+    if (error) {
+        console.error(`Error uploading file ${fileName}:`, error);
+        throw error;
+    }
 
     console.log(
-        `${localProcessedVideoPath}/${fileName} uploaded to gs://${processedVideoBucketName}/${fileName}.`
+        `${fileName} uploaded to Supabase processed-videos.`
     );
 
-    await bucket.file(fileName).makePublic();
 }
 
 
