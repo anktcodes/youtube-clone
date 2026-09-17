@@ -14,24 +14,17 @@ app.get("/", (req, res) => {
 });
 
 app.post("/process-video", async (req, res) => {
-    //Get the bucket and filename from the Cloud Pub/Sub message
-    let data;
-    try {
-        const message = Buffer.from(req.body.message.data, 'base64').toString('utf8');
-        data = JSON.parse(message);
-        if (!data.name) {
-            throw new Error('Invalid message payload received.');
-        }
+    //Get the filename from the request
+    const { fileName } = req.body;
 
-    } catch (error) {
-        console.error(error);
-        return res.status(400).send('Bad Request: missing filename.');
+    if (!fileName) {
+        return res.status(400).send("Bad Request: missing filename.");
     }
 
-    const inputFileName = data.name;
+    const inputFileName = fileName;
     const outputFileName = `processed-${inputFileName}`;
 
-    //Download the raw video from Cloud storage
+    //Download the raw video from Supabase storage
     await downloadRawVideo(inputFileName);
 
     //convert the video to 360p
@@ -48,7 +41,7 @@ app.post("/process-video", async (req, res) => {
         return res.status(500).send('Internal Server Error: video processing failed.');
     }
 
-    //Upload the processed video to cloud storage
+    //Upload the processed video to supabase storage
     await uploadProcessedVideo(outputFileName);
     await Promise.all([
         deleteRawVideo(inputFileName),
