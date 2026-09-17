@@ -35,16 +35,17 @@ export function setupDirectories(){
 export function convertVideo(rawVideoName: string, processedVideoName: string) {
     return new Promise((resolve, reject) => {
         ffmpeg(`${localRawVideoPath}/${rawVideoName}`)
-            .outputOptions('-vf', "scale=-1:360")
-            .on("end", ()=> {
-                console.log("Processing finished successfully.")
+            .outputOptions('-vf', 'scale=-1:360')
+            .on('end', () => {
+                console.log('Processing finished successfully.');
+                resolve(null);
             })
-            .on("error", (err) => {
+            .on('error', (err) => {
                 console.log(`An error occurred: ${err.message}`);
                 reject(err);
             })
             .save(`${localProcessedVideoPath}/${processedVideoName}`);
-    })
+    });
 }
 
 
