@@ -1,3 +1,6 @@
+'use client';
+
+
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
@@ -10,6 +13,7 @@ import {
     User
 
  } from "firebase/auth";
+import { use } from "react";
 
 
 // TODO: Add SDKs for Firebase products that you want to use
