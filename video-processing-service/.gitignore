@@ -1,1 +1,5 @@
 node_modules
+video-processing-service/.env
+.env
+.env.*
+!.env.example

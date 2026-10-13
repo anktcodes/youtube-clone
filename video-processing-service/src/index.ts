@@ -1,6 +1,9 @@
+import userRoutes from './user-routes';
 import express from "express";
 import ffmpeg from "fluent-ffmpeg";
 import { convertVideo,  deleteProcessedVideo, deleteRawVideo, downloadRawVideo, setupDirectories, uploadProcessedVideo } from "./storage";
+
+import 'dotenv/config';
 
 ffmpeg.setFfmpegPath("/usr/bin/ffmpeg");
 
@@ -8,6 +11,7 @@ setupDirectories();
 
 const app = express();
 app.use(express.json());
+app.use('/api/users', userRoutes);
 
 app.get("/", (req, res) => {
     res.send("Video Processing Service is running successfully!");
