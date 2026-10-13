@@ -1,3 +1,4 @@
+import cors from 'cors';
 import userRoutes from './user-routes';
 import express from "express";
 import ffmpeg from "fluent-ffmpeg";
@@ -12,6 +13,17 @@ setupDirectories();
 const app = express();
 app.use(express.json());
 app.use('/api/users', userRoutes);
+
+app.use(cors({
+    origin: [
+        'http://localhost:3000',
+        'https://ideal-engine-699wq645wgpvf4r5g-3000.app.github.dev/'
+    ],
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
     res.send("Video Processing Service is running successfully!");
