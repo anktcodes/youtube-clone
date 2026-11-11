@@ -9,6 +9,8 @@ import 'dotenv/config';
 // for fixing the path issue with processed videos from raw videos
 import path from "path";
 
+import { claimVideo, setVideo } from "./videos";
+
 ffmpeg.setFfmpegPath("/usr/bin/ffmpeg");
 
 setupDirectories();
@@ -35,7 +37,7 @@ app.post("/process-video", async (req, res) => {
     //Get the filename from the request
     const { fileName } = req.body;
 
-    if (!fileName) {
+    if (!fileName || typeof fileName !== "string") {
         return res.status(400).send("Bad Request: missing filename.");
     }
 
@@ -45,10 +47,28 @@ app.post("/process-video", async (req, res) => {
         `processed-${path.basename(inputFileName)}`
     );
 
+    // Extract Firebase UID from the first folder in the storage path
+    const firebaseUid = inputFileName.split("/")[0];
+
+    if (!inputFileName.includes("/") || !firebaseUid) {
+        return res.status(400).send("Invalid video file path.");
+    }
+
+    let videoClaimed = false;
+    
+
     //Download the raw video from Supabase storage
     // await downloadRawVideo(inputFileName);
 
     try{
+        //0. Claim the video to prevent duplicate processsing
+        const isNewVideo = await claimVideo(inputFileName, firebaseUid);
+        if (!isNewVideo) {
+            console.log(`Video already registered: ${inputFileName}`);
+            return res.status(200).send("Video already processing or processed.");
+        }
+
+
         //1. Download the raw video from Supabase storage
         console.log(`Starting download: ${inputFileName}`);
         await downloadRawVideo(inputFileName);
@@ -64,26 +84,51 @@ app.post("/process-video", async (req, res) => {
         await uploadProcessedVideo(outputFileName);
         console.log(`Upload complete: ${outputFileName}`);
 
-        //4. Delete raw and processed videos from local storage
-        console.log(`Starting deletion of local files: ${inputFileName}, ${outputFileName}`);
-        await Promise.all([
-            deleteRawVideo(inputFileName),
-            deleteProcessedVideo(outputFileName)
-        ]);
-        console.log(`Deletion complete: ${inputFileName}, ${outputFileName}`);
+        //4. Update the video record in Supabase with the processed video path and status
+        await setVideo(inputFileName, {
+            status:"processed",
+            processed_file_path: outputFileName
+        });
+        console.log(`Video marked as processed: ${inputFileName}`);
+        
 
-        return res.status(200).send( "Processing finished successfully.");
-    } catch (err){
-        console.error("video processing failed:", err);
-        await Promise.all([
-            deleteRawVideo(inputFileName),
-            deleteProcessedVideo(outputFileName)
-        ]);
+        //5. Delete raw and processed videos from local storage
+        try {
+            await Promise.all([
+                deleteRawVideo(inputFileName),
+                deleteProcessedVideo(outputFileName)
+            ]);
+        } catch (cleanupError) {
+            console.error("Local file cleanup failed:", cleanupError);
+        }
 
-        return res.status(500).send('Internal Server Error: video processing failed.');
+        return res.status(200).send("Processing finished successfully.");
+
+    } catch (err) {
+        console.error("Video processing failed:", err);
+
+        // Mark video as failed in Supabase
+        if (videoClaimed) {
+            try {
+                await setVideo(inputFileName, { status: "failed" });
+            } catch (dbError) {
+                console.error("Failed to update video status:", dbError);
+            }
+        }
+
+        // Clean up local temporary files
+        try {
+            await Promise.all([
+                deleteRawVideo(inputFileName),
+                deleteProcessedVideo(outputFileName)
+            ]);
+        } catch (cleanupError) {
+            console.error("Local file cleanup failed:", cleanupError);
+        }
+
+        return res.status(500).send("Internal Server Error: video processing failed.");
     }
 });
-
 const port = process.env.PORT || 3000
 app.listen(port, () => {
     console.log(
