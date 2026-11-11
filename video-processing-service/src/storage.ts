@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import ffmpeg from 'fluent-ffmpeg';
 
+import path from "path";
 
 // const storage = new Storage(); -- Now using Supabase instead
 const supabase = createClient(
@@ -34,7 +35,13 @@ export function setupDirectories(){
  */
 export function convertVideo(rawVideoName: string, processedVideoName: string) {
     return new Promise((resolve, reject) => {
-        ffmpeg(`${localRawVideoPath}/${rawVideoName}`)
+        
+        const inputPath = path.join(localRawVideoPath, rawVideoName);
+        const outputPath = path.join(localProcessedVideoPath, processedVideoName);
+
+        fs.mkdirSync(path.dirname(outputPath), {recursive:true}); // Ensure the output directory exists
+        
+        ffmpeg(inputPath)
             .outputOptions('-vf', 'scale=-1:360')
             .on('end', () => {
                 console.log('Processing finished successfully.');
@@ -44,7 +51,7 @@ export function convertVideo(rawVideoName: string, processedVideoName: string) {
                 console.log(`An error occurred: ${err.message}`);
                 reject(err);
             })
-            .save(`${localProcessedVideoPath}/${processedVideoName}`);
+            .save(outputPath);
     });
 }
 
@@ -61,6 +68,11 @@ export async function downloadRawVideo(fileName: string) {
         throw error;
     }
 
+    const filePath = path.join(localRawVideoPath, fileName);
+
+    // Create the user's local directory if it doesn't exist.
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
     const buffer = Buffer.from(await data.arrayBuffer());
 
     fs.writeFileSync(`${localRawVideoPath}/${fileName}`, buffer);
@@ -72,7 +84,8 @@ export async function downloadRawVideo(fileName: string) {
 
 
 export async function uploadProcessedVideo(fileName: string) {
-    const filePath = `${localProcessedVideoPath}/${fileName}`;
+    const filePath = path.join(localProcessedVideoPath, fileName);
+    
     
     console.log(`Reading processed video from ${filePath} for upload to Supabase.`);
     if (!fs.existsSync(filePath)) {

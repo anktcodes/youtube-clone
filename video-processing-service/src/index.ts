@@ -6,6 +6,8 @@ import { convertVideo,  deleteProcessedVideo, deleteRawVideo, downloadRawVideo, 
 
 import videoRoutes from './video-routes';
 import 'dotenv/config';
+// for fixing the path issue with processed videos from raw videos
+import path from "path";
 
 ffmpeg.setFfmpegPath("/usr/bin/ffmpeg");
 
@@ -38,7 +40,10 @@ app.post("/process-video", async (req, res) => {
     }
 
     const inputFileName = fileName;
-    const outputFileName = `processed-${inputFileName}`;
+    const outputFileName = path.join(
+        path.dirname(inputFileName),
+        `processed-${path.basename(inputFileName)}`
+    );
 
     //Download the raw video from Supabase storage
     // await downloadRawVideo(inputFileName);
