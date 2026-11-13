@@ -19,7 +19,8 @@ const app = express();
 app.use(cors({
     origin: [
         "http://localhost:3000",
-        "https://ideal-engine-699wq645wgpvf4r5g-3000.app.github.dev"
+        "https://ideal-engine-699wq645wgpvf4r5g-3000.app.github.dev",
+        "https://youtube-clone-frontend-xig4.onrender.com"
     ],
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"]
