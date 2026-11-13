@@ -81,4 +81,38 @@ router.post(
     }
 );
 
+
+router.get('/', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('videos')
+            .select(`
+                id,
+                title,
+                description,
+                processed_file_path,
+                created_at
+                `)
+            .eq('status', 'processed')
+            .not('processed_file_path', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(10);
+
+        if (error) {
+            throw error;
+        }
+
+        return res.status(200).json({
+            videos:data
+        });
+
+    } catch (error){
+        console.error('Error fetching videos:', error);
+        return res.status(500).json({
+            error: 'Error fetching videos'
+        });
+    }
+});
+
+
 export default router;
