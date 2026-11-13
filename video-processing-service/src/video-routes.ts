@@ -114,5 +114,47 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const {data:video, error } = await supabase
+        .from('videos')
+        .select(`
+            id,
+            title,
+            description,
+            processed_file_path,
+            created_at
+        `)
+        .eq('id', id)
+        .eq('status', 'processed')
+        .not('processed_file_path', 'is', null)
+        .single();
+
+    if (error || !video) {
+        return res.status(404).json({
+            error: `Video not found`
+        });
+    }
+    const {data} = supabase.storage
+        .from('processed-videos')
+        .getPublicUrl(video.processed_file_path!);
+
+    return res.status(200).json({
+        video: {
+            ...video,
+            video_url: data.publicUrl
+        }
+    });
+
+    } catch (error) {
+        console.error('Error fetching video:', error);
+
+        return res.status(500).json({
+            error: 'Error fetching video'
+        });
+    }
+});
 
 export default router;
